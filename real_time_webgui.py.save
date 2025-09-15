@@ -1,0 +1,304 @@
+import os
+import sys
+import asyncio
+import json
+import logging
+import tempfile
+import time
+from dataclasses import dataclass
+from typing import Optional, Dict
+
+import numpy as np
+import soundfile as sf
+import torch
+import uvicorn
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.responses import JSONResponse
+from dotenv import load_dotenv
+
+os.environ["ENABLE_V2"] = "1"
+
+# Force CONFIG_PATH if not set
+if "CONFIG_PATH" not in os.environ:
+    os.environ["CONFIG_PATH"] = "./configs/v2/vc_wrapper.yaml"
+
+# Load environment variables from .env file
+load_dotenv()
+
+# ensure repo root on path
+ROOT = os.getcwd()
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
+# import engine entrypoints
+try:
+    from vc_engine import init_engine, custom_infer_v2
+except ImportError as e:
+    raise RuntimeError(f"Failed to import from vc_engine.py. Make sure the file is in the root directory. Error: {e}")
+
+# --- Configuration from Environment Variables ---
+CONFIG_PATH = os.environ.get("CONFIG_PATH", os.path.join(ROOT, "configs", "v2", "vc_wrapper.yaml"))
+REFERENCE_WAV_DEFAULT = os.environ.get("REFERENCE_WAV", os.path.join(ROOT, "examples", "reference", "trump_0.wav"))
+GPU = int(os.environ.get("GPU", "0"))
+FP16 = os.environ.get("FP16", "1").lower() in ("true", "1")
+BLOCK_TIME = float(os.environ.get("BLOCK_TIME", "0.25"))
+CROSSFADE = float(os.environ.get("CROSSFADE", "0.05"))
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+FALLBACK_ON_OVERLOAD = os.environ.get("FALLBACK_ON_OVERLOAD", "passthrough").lower()
+
+MODEL_SR_DESIRED_SEMANTIC = 16000  # semantic SR required by the engine
+
+# --- Logging Setup ---
+logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+logger = logging.getLogger("seedvc.app")
+
+# --- FastAPI App Initialization ---
+app = FastAPI(title="Seed-VC v2 Inference Service")
+
+# --- Utility Functions ---
+def resample_audio_np(x: np.ndarray, orig_sr: int, target_sr: int) -> np.ndarray:
+    if orig_sr == target_sr:
+        return x
+    try:
+        import resampy
+        return resampy.resample(x, orig_sr, target_sr).astype(np.float32)
+    except ImportError:
+        logger.warning("resampy not found, resampling will be skipped. Please install it for proper operation.")
+        return x # Return original if resampy is not available
+
+
+# --- Realtime Processor ---
+@dataclass
+class BufferConfig:
+    block_time: float = BLOCK_TIME
+    crossfade: float = CROSSFADE
+    semantic_sr: int = MODEL_SR_DESIRED_SEMANTIC
+
+class RealtimeProcessor:
+    def __init__(self, model_set, cfg: BufferConfig, reference_wav_16k: np.ndarray, reference_name: str):
+        self.model_set = model_set
+        self.cfg = cfg
+        self.reference_wav = reference_wav_16k.astype(np.float32)
+        self.reference_name = reference_name
+
+        self.block_samples = int(round(cfg.block_time * cfg.semantic_sr))
+        self.crossfade_samples = int(round(cfg.crossfade * cfg.semantic_sr))
+        if self.block_samples <= self.crossfade_samples:
+            raise ValueError("block_time must be greater than crossfade_time")
+        self.hop = self.block_samples - self.crossfade_samples
+
+        self._in_buf = np.zeros((0,), dtype=np.float32)
+        self._out_buf = np.zeros((0,), dtype=np.float32)
+        self._out_queue = asyncio.Queue()
+
+        self._fade_in = np.linspace(0.0, 1.0, self.crossfade_samples, dtype=np.float32)
+        self._fade_out = 1.0 - self._fade_in
+
+        self.diffusion_steps = 10
+        self.inference_cfg_rate = 0.7
+        self.max_prompt_length = 3.0
+        self.cd_difference = 2.0
+        self.last_infer_ms = 0.0
+
+    def push_samples(self, samples: np.ndarray):
+        self._in_buf = np.concatenate([self._in_buf, samples.astype(np.float32)])
+
+    def has_block(self) -> bool:
+        return self._in_buf.shape[0] >= self.block_samples
+
+    async def process_one(self):
+        if not self.has_block():
+            return
+        block = self._in_buf[:self.block_samples]
+        self._in_buf = self._in_buf[self.hop:]
+
+        t0 = time.time()
+        try:
+            input_tensor = torch.from_numpy(block).to(torch.float32)
+            loop = asyncio.get_running_loop()
+            kwargs = {"inference_cfg_rate": self.inference_cfg_rate, "cd_difference": self.cd_difference}
+            
+            processed = await loop.run_in_executor(None,
+                lambda: custom_infer_v2(
+                    self.model_set, self.reference_wav, self.reference_name,
+                    input_tensor, diffusion_steps=self.diffusion_steps,
+                    max_prompt_length=self.max_prompt_length, **kwargs
+                )
+            )
+            
+            processed_np = processed.detach().cpu().numpy().astype(np.float32)
+            
+            if processed_np.shape[0] < self.block_samples:
+                processed_np = np.pad(processed_np, (0, self.block_samples - processed_np.shape[0]))
+            elif processed_np.shape[0] > self.block_samples:
+                processed_np = processed_np[:self.block_samples]
+
+            await self._out_queue.put(processed_np)
+
+        except Exception as e:
+            logger.exception("Inference error: %s", e)
+            if FALLBACK_ON_OVERLOAD == "mute":
+                await self._out_queue.put(np.zeros((self.block_samples,), dtype=np.float32))
+            elif FALLBACK_ON_OVERLOAD == "disconnect":
+                raise
+            else: # passthrough
+                await self._out_queue.put(block)
+        finally:
+            self.last_infer_ms = (time.time() - t0) * 1000.0
+            logger.info("Inference took %.1f ms for a %.3fs block", self.last_infer_ms, self.block_samples / self.cfg.semantic_sr)
+
+    async def _reconstruct_one(self):
+        if self._out_queue.empty():
+            return
+        block = await self._out_queue.get()
+        if self._out_buf.shape[0] < self.crossfade_samples:
+            self._out_buf = np.concatenate([self._out_buf, block])
+            return
+        
+        existing_tail = self._out_buf[-self.crossfade_samples:]
+        new_head = block[:self.crossfade_samples]
+        crossfaded = existing_tail * self._fade_out + new_head * self._fade_in
+        self._out_buf = np.concatenate([self._out_buf[:-self.crossfade_samples], crossfaded, block[self.crossfade_samples:]])
+
+    async def get_output(self, n_samples: int) -> Optional[np.ndarray]:
+        while self._out_buf.shape[0] < n_samples and not self._out_queue.empty():
+            await self._reconstruct_one()
+        if self._out_buf.shape[0] < n_samples:
+            return None
+        out = self._out_buf[:n_samples]
+        self._out_buf = self._out_buf[n_samples:]
+        return out
+
+# --- Engine Initialization and Session Management ---
+_engine_ready = False
+_model_set = None
+_sessions: Dict[str, RealtimeProcessor] = {}
+
+@app.on_event("startup")
+async def startup_event():
+    global _engine_ready, _model_set
+    logger.info("Starting up and initializing model engine...")
+    
+    class ArgsObj:
+        fp16 = FP16
+        checkpoint_path = None
+        config_path = CONFIG_PATH
+        gpu = GPU
+
+    try:
+        _model_set = init_engine(ArgsObj())
+        _engine_ready = True
+        logger.info("Model engine initialized successfully.")
+    except Exception as e:
+        logger.error("Failed to initialize model engine: %s", e, exc_info=True)
+        # Depending on desired behavior, you might want the app to fail starting
+        # For now, it will start but endpoints will fail.
+
+def get_engine():
+    if not _engine_ready:
+        raise HTTPException(status_code=503, detail="Model engine is not ready or failed to initialize.")
+    return _model_set
+
+# --- API Endpoints ---
+@app.post("/session/start")
+async def session_start(payload: dict):
+    model_set = get_engine()
+    sid = payload.get("session_id") or f"session-{int(time.time()*1000)}"
+    if sid in _sessions:
+        return JSONResponse({"status": "exists", "session_id": sid})
+
+    ref_path = payload.get("reference_path", REFERENCE_WAV_DEFAULT)
+    if not os.path.isabs(ref_path):
+        ref_path = os.path.join(ROOT, ref_path)
+
+    if not os.path.exists(ref_path):
+        raise HTTPException(status_code=404, detail=f"Reference audio not found: {ref_path}")
+
+    ref_wav, ref_sr = sf.read(ref_path, dtype="float32")
+    if ref_wav.ndim > 1:
+        ref_wav = np.mean(ref_wav, axis=1)
+    ref_wav_16k = resample_audio_np(ref_wav, ref_sr, MODEL_SR_DESIRED_SEMANTIC)
+
+    cfg = BufferConfig(
+        block_time=float(payload.get("block_time", BLOCK_TIME)),
+        crossfade=float(payload.get("crossfade", CROSSFADE))
+    )
+    processor = RealtimeProcessor(model_set, cfg, ref_wav_16k, os.path.basename(ref_path))
+    
+    # Set runtime params
+    processor.diffusion_steps = int(payload.get("diffusion_steps", processor.diffusion_steps))
+    processor.inference_cfg_rate = float(payload.get("inference_cfg_rate", processor.inference_cfg_rate))
+    processor.max_prompt_length = float(payload.get("max_prompt_length", processor.max_prompt_length))
+    processor.cd_difference = float(payload.get("cd_difference", processor.cd_difference))
+
+    _sessions[sid] = processor
+    logger.info("Created session %s (ref=%s)", sid, ref_path)
+    return {"status": "ok", "session_id": sid}
+
+@app.post("/session/stop")
+async def session_stop(payload: dict):
+    sid = payload.get("session_id")
+    if not sid or sid not in _sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+    del _sessions[sid]
+    logger.info("Stopped session %s", sid)
+    return {"status": "stopped", "session_id": sid}
+
+
+@app.websocket("/ws/{session_id}")
+async def websocket_stream(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    if session_id not in _sessions:
+        await websocket.send_text(json.dumps({"error": "session_not_found"}))
+        await websocket.close()
+        return
+
+    processor = _sessions[session_id]
+    client_sr = None
+
+    try:
+        init_raw = await websocket.receive_text()
+        init = json.loads(init_raw)
+        if init.get("type") != "init":
+            raise ValueError("First message must be an init JSON object")
+        client_sr = int(init.get("sample_rate", 48000))
+        logger.info("WS session %s connected with sr=%d", session_id, client_sr)
+
+        while True:
+            data = await websocket.receive()
+            if "bytes" in data:
+                pcm = np.frombuffer(data["bytes"], dtype=np.int16).astype(np.float32) / 32768.0
+                arr16k = resample_audio_np(pcm, client_sr, processor.cfg.semantic_sr)
+                processor.push_samples(arr16k)
+
+                if processor.has_block():
+                    await processor.process_one()
+                
+                out_samples_needed = int(round(len(pcm) * (processor.cfg.semantic_sr / client_sr)))
+                out_chunk = await processor.get_output(out_samples_needed)
+                if out_chunk is None:
+                    out_chunk = np.zeros(out_samples_needed, dtype=np.float32)
+                
+                out_resampled = resample_audio_np(out_chunk, processor.cfg.semantic_sr, client_sr)
+
+                # Ensure length matches input to avoid drift
+                if len(out_resampled) != len(pcm):
+                    out_resampled = np.pad(out_resampled, (0, len(pcm) - len(out_resampled)))[:len(pcm)]
+                
+                int16 = np.clip(out_resampled * 32767.0, -32768, 32767).astype(np.int16)
+                await websocket.send_bytes(int16.tobytes())
+
+            elif "text" in data:
+                 logger.warning("Received unexpected text data: %s", data["text"])
+
+
+    except (WebSocketDisconnect, ValueError) as e:
+        logger.info("WS %s disconnected: %s", session_id, e)
+    except Exception as e:
+        logger.exception("WS %s error: %s", session_id, e)
+    finally:
+        logger.info("Closing websocket for %s", session_id)
+
+
+if __name__ == "__main__":
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, log_level="info")
