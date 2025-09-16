@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seed-VC - GUI</title>
+    <title>Seed-VC - GUI (Agora)</title>
+    <!-- Replaced LiveKit SDK with Agora SDK -->
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
     <style>
         /* --- General Styles & Variables --- */
         :root {
@@ -20,6 +22,8 @@
             --select-bg: #3c3c3c;
             --select-text: #ffffff;
             --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --indicator-on: #4caf50;
+            --indicator-off: #f44336;
         }
 
         body {
@@ -46,7 +50,7 @@
             max-width: 100%;
             overflow: hidden;
         }
-        
+
         /* --- Custom Title Bar --- */
         .title-bar {
             background-color: #e3e9f5;
@@ -58,7 +62,7 @@
             border-bottom: 1px solid var(--border-color);
             cursor: default;
         }
-        
+
         .window-controls {
             display: flex;
             gap: 8px;
@@ -86,7 +90,7 @@
         .main-content {
             padding: 15px;
         }
-        
+
         fieldset {
             border: 1px solid var(--border-color);
             border-radius: 4px;
@@ -110,7 +114,7 @@
             font-family: var(--font-family);
             font-size: 1em;
         }
-        
+
         button, .button {
             background: linear-gradient(to bottom, var(--button-bg-start), var(--button-bg-end));
             border: 1px solid var(--button-border);
@@ -134,9 +138,8 @@
             align-items: center;
             gap: 10px;
         }
-        .load-audio-section input[type="text"] {
-            flex-grow: 1;
-            background-color: #f0f0f0; /* Indicates read-only */
+        .load-audio-section p {
+            margin: 0;
         }
 
         .sound-device-section {
@@ -201,7 +204,7 @@
             min-width: 35px;
             text-align: center;
         }
-        
+
         input[type="range"] {
             -webkit-appearance: none;
             width: 100%;
@@ -245,39 +248,7 @@
             cursor: pointer;
         }
 
-        /* --- Custom Radio Buttons --- */
-        .radio-group {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .radio-group input[type="radio"] {
-            display: none;
-        }
-        .radio-group label {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-        }
-        .radio-group label::before {
-            content: '';
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 1px solid var(--border-color);
-            background-color: #fff;
-            margin-right: 6px;
-            display: inline-block;
-            box-sizing: border-box;
-            flex-shrink: 0;
-        }
-        .radio-group input[type="radio"]:checked + label::before {
-            background-color: #505050;
-            border-color: #404040;
-            box-shadow: inset 0 0 0 2px white;
-        }
-
-        /* --- Bottom Controls --- */
+        /* --- Bottom Controls & Status Indicators --- */
         .bottom-bar {
             display: flex;
             justify-content: space-between;
@@ -295,19 +266,30 @@
             font-size: 1.1em;
             font-weight: 600;
         }
-        .bottom-bar .status-info {
+        
+        /* New Status Styles */
+        .status-container {
             display: flex;
-            align-items: center;
-            gap: 20px;
             flex-wrap: wrap;
+            gap: 10px 20px;
+            align-items: center;
         }
-        .bottom-bar .status-info .status-item {
+        .status-box {
             display: flex;
             align-items: center;
         }
+        .indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 6px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .indicator.on { background: var(--indicator-on); }
+        .indicator.off { background: var(--indicator-off); }
 
     </style>
-    <script src="/static/livekit-client.js"></script>
 </head>
 <body>
 
@@ -320,13 +302,14 @@
                 <span class="close">&times;</span>
             </div>
         </div>
-        
+
         <div class="main-content">
             <fieldset>
                 <legend>Load reference audio</legend>
                 <div class="load-audio-section">
-                    <input type="text" value="F:/seedv2/seed-vc2/examples/reference/trump_0.wav" readonly>
-                    <button class="button">choose an audio file</button>
+                    <input type="file" id="referenceFile" accept="audio/*">
+                    <button id="uploadRefBtn">Upload Reference</button>
+                    <p id="refStatus"></p>
                 </div>
             </fieldset>
 
@@ -335,14 +318,14 @@
                 <div class="sound-device-section">
                     <label for="device-type">Device type</label>
                     <select id="device-type"><option>MME</option></select>
-                    
+
                     <button>WASAPI Exclusive Device</button>
                     <div></div> <label for="input-device">Input Device</label>
                     <select id="input-device"></select>
-                    
+
                     <label for="output-device">Output Device</label>
                     <select id="output-device"></select>
-                    
+
                     <div class="bottom-row">
                         <button id="reload-devices-btn">Reload devices</button>
                         <div class="radio-group">
@@ -378,7 +361,7 @@
                         <span id="max-prompt-output" class="slider-value">3.0</span>
                     </div>
                 </fieldset>
-                
+
                 <fieldset>
                     <legend>Performance settings</legend>
                     <div class="slider-control">
@@ -414,224 +397,279 @@
                     <button id="start-vc-btn">Start Voice Conversion</button>
                     <button id="stop-vc-btn" disabled>Stop Voice Conversion</button>
                 </div>
-                <div class="status-info">
-                    <div class="radio-group status-item">
-                        <input type="radio" id="input-listening" name="status" checked>
-                        <label for="input-listening">Input listening</label>
+                <!-- Merged Status UI -->
+                <div class="status-container">
+                    <div class="status-box">
+                      <span class="indicator off" id="mic-ind"></span> Input listening
                     </div>
-                     <div class="radio-group status-item">
-                        <input type="radio" id="voice-conversion" name="status">
-                        <label for="voice-conversion">Voice Conversion</label>
+                    <div class="status-box">
+                      <span class="indicator off" id="vc-ind"></span> Voice Conversion
                     </div>
-                    <span id="lk-status">Status: Disconnected</span>
-                    <span>Algorithm delay (ms): 1470</span>
-                    <span>Inference time (ms):</span>
+                    <div class="status-box">
+                      <strong>Status:</strong> <span id="status-text">Disconnected</span>
+                    </div>
+                    <div class="status-box">
+                      <strong>Delay (ms):</strong> <span id="algo-delay">0</span>
+                    </div>
+                     <div class="status-box">
+                      <strong>Inference (ms):</strong> <span id="infer-time">0</span>
+                    </div>
                 </div>
             </div>
 
         </div>
     </div>
-    
+
+    <!-- UI Interaction Script (Unchanged) -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- Slider Functionality ---
             const sliders = document.querySelectorAll('input[type="range"]');
             sliders.forEach(slider => {
                 const outputElement = document.getElementById(slider.dataset.output);
                 if (!outputElement) return;
-
                 const updateSliderValue = () => {
                     const step = slider.getAttribute('step') || '1';
                     const decimalPlaces = (step.includes('.')) ? step.split('.')[1].length : 0;
                     outputElement.textContent = parseFloat(slider.value).toFixed(decimalPlaces);
                 };
-                
                 updateSliderValue();
                 slider.addEventListener('input', updateSliderValue);
             });
 
-            // --- Audio Device Selection Functionality ---
             const inputDeviceSelect = document.getElementById('input-device');
             const outputDeviceSelect = document.getElementById('output-device');
             const reloadButton = document.getElementById('reload-devices-btn');
 
             async function populateAudioDevices() {
-                // Clear existing options to prevent duplicates on reload
                 inputDeviceSelect.innerHTML = '';
                 outputDeviceSelect.innerHTML = '';
-
                 try {
-                    // We must request user permission to access media devices.
-                    // This is required to get the device labels (names).
                     await navigator.mediaDevices.getUserMedia({ audio: true });
-                    
                     const devices = await navigator.mediaDevices.enumerateDevices();
-                    const audioInputDevices = devices.filter(device => device.kind === 'audioinput');
-                    const audioOutputDevices = devices.filter(device => device.kind === 'audiooutput');
-
-                    // Populate Input Devices
-                    if (audioInputDevices.length > 0) {
-                        audioInputDevices.forEach(device => {
-                            const option = document.createElement('option');
-                            option.value = device.deviceId;
-                            option.text = device.label || `Microphone ${inputDeviceSelect.length + 1}`;
-                            inputDeviceSelect.appendChild(option);
-                        });
-                    } else {
-                        inputDeviceSelect.innerHTML = '<option>No microphones found</option>';
-                    }
-
-                    // Populate Output Devices
-                    if (audioOutputDevices.length > 0) {
-                        audioOutputDevices.forEach(device => {
-                            const option = document.createElement('option');
-                            option.value = device.deviceId;
-                            option.text = device.label || `Speaker ${outputDeviceSelect.length + 1}`;
-                            outputDeviceSelect.appendChild(option);
-                        });
-                    } else {
-                        outputDeviceSelect.innerHTML = '<option>No speakers found</option>';
-                    }
-
+                    const audioInputDevices = devices.filter(d => d.kind === 'audioinput');
+                    const audioOutputDevices = devices.filter(d => d.kind === 'audiooutput');
+                    audioInputDevices.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.deviceId;
+                        opt.text = d.label || `Microphone ${inputDeviceSelect.length + 1}`;
+                        inputDeviceSelect.appendChild(opt);
+                    });
+                    audioOutputDevices.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.deviceId;
+                        opt.text = d.label || `Speaker ${outputDeviceSelect.length + 1}`;
+                        outputDeviceSelect.appendChild(opt);
+                    });
                 } catch (err) {
                     console.error("Error accessing media devices:", err);
-                    const errorOption = '<option>Permission denied</option>';
-                    inputDeviceSelect.innerHTML = errorOption;
-                    outputDeviceSelect.innerHTML = errorOption;
                 }
             }
-
-            // Populate devices when the page loads
             populateAudioDevices();
-
-            // Add click event to the reload button
             reloadButton.addEventListener('click', populateAudioDevices);
-
         });
     </script>
-    
+
+    <!-- Main Application Logic Script -->
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- LiveKit Integration ---
-        
         const startBtn = document.getElementById('start-vc-btn');
         const stopBtn = document.getElementById('stop-vc-btn');
-        const statusEl = document.getElementById('lk-status');
-        let room = null;
+        const uploadRefBtn = document.getElementById('uploadRefBtn');
+        const micIndicator = document.getElementById('mic-ind');
+        const vcIndicator = document.getElementById('vc-ind');
+        const statusText = document.getElementById('status-text');
+        const algoDelayEl = document.getElementById('algo-delay');
+        const inferTimeEl = document.getElementById('infer-time');
 
-        // 1. Function to fetch a LiveKit token from your backend
-        async function getLiveKitToken(identity = 'user1', roomName = 'testroom') {
-            const resp = await fetch(`http://3.89.25.180:3000/get_token?identity=${identity}&room=${roomName}`);
-            const data = await resp.json();
-            return data.token;
+        const CHANNEL = "realtime-vc";
+
+        // State variables
+        let client, localTrack, ws, audioCtx, processor, micSource, processedStreamDestination;
+        let analyser, dataArray, animationFrameId;
+        let isReconnecting = false;
+
+        async function uploadReference() {
+            const fileInput = document.getElementById("referenceFile");
+            const refStatus = document.getElementById("refStatus");
+            const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+            if (!fileInput.files.length) {
+                refStatus.textContent = "Please choose a file.";
+                return;
+            }
+            const file = fileInput.files[0];
+            if (file.size > MAX_FILE_SIZE) {
+                refStatus.textContent = `File too large (max 5 MB).`;
+                return;
+            }
+            const formData = new FormData();
+            formData.append("file", file);
+            refStatus.textContent = "Uploading...";
+            try {
+                const res = await fetch("/upload_reference", { method: "POST", body: formData });
+                refStatus.textContent = res.ok ? "✅ Reference uploaded!" : "❌ Failed to upload reference";
+            } catch (err) {
+                console.error("Upload error:", err);
+                refStatus.textContent = "❌ Upload error";
+            }
         }
+        uploadRefBtn.addEventListener('click', uploadReference);
 
-        // Attach remote participant audio track to a new <audio> element
-        function attachTrack(track) {
-            const audioEl = document.createElement("audio");
-            audioEl.autoplay = true;
-            audioEl.srcObject = new MediaStream([track.mediaStreamTrack]);
-            document.body.appendChild(audioEl);
-            console.log("Attached remote audio track:", track.sid);
-
-            // Optional: If you need to feed this audio into a custom inference pipeline,
-            // you would start here. For example:
-            // const audioCtx = new AudioContext();
-            // const source = audioCtx.createMediaStreamSource(new MediaStream([track.mediaStreamTrack]));
-            // source.connect(customInferNode); // pseudocode for your inference
+        async function fetchAgoraToken(uid, channel) {
+            try {
+                const res = await fetch(`/get_token?uid=${uid}&channel=${channel}`);
+                if (!res.ok) throw new Error(`Server error: ${res.status}`);
+                return res.json();
+            } catch (error) {
+                console.error("Failed to get Agora token:", error);
+                throw error;
+            }
         }
         
-        // Subscribe to a participant's tracks
-        function subscribeParticipant(participant) {
-            console.log("Participant connected:", participant.identity);
-            participant.audioTracks.forEach(trackPub => {
-                if (trackPub.track) {
-                    attachTrack(trackPub.track);
+        function playPCM(float32Array) {
+            if (!audioCtx) return;
+            const buffer = audioCtx.createBuffer(1, float32Array.length, audioCtx.sampleRate);
+            buffer.copyToChannel(float32Array, 0);
+            const source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioCtx.destination);
+            if (processedStreamDestination) source.connect(processedStreamDestination);
+            source.start();
+        }
+
+        // Sets up the real-time mic level indicator
+        function setupMicLevel(audioSourceNode, context) {
+            analyser = context.createAnalyser();
+            analyser.fftSize = 256;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            audioSourceNode.connect(analyser);
+
+            function updateMeter() {
+                analyser.getByteTimeDomainData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    const v = (dataArray[i] - 128) / 128;
+                    sum += v * v;
                 }
-                trackPub.on("subscribed", track => attachTrack(track));
-            });
-            participant.on("trackSubscribed", track => attachTrack(track));
-        }
-
-        // 2. LiveKit client connection logic
-        async function connectToLiveKit() {
-            try {
-                statusEl.textContent = 'Status: Fetching token...';
-                const token = await getLiveKitToken(); // identity + room are now defaults in the function
-                
-                // Connect to your LiveKit server
-                const url = "ws://3.89.25.180:7881"; // WebSocket endpoint of your LiveKit server
-                
-                statusEl.textContent = 'Status: Connecting to LiveKit...';
-                const roomConnection = await LiveKit.Room.connect(url, token, {
-                    audio: true,
-                    video: false 
-                });
-
-                console.log("Connected to LiveKit room:", roomConnection.name);
-                statusEl.textContent = `Status: Connected to ${roomConnection.name}`;
-                
-                // Play remote participants' audio that are already in the room
-                roomConnection.participants.forEach(participant => subscribeParticipant(participant));
-                // Handle new participants joining the room
-                roomConnection.on("participantConnected", participant => subscribeParticipant(participant));
-
-                return roomConnection;
-            } catch (err) {
-                console.error("LiveKit connection failed:", err);
-                statusEl.textContent = 'Status: Connection failed';
-                throw err;
+                const rms = Math.sqrt(sum / dataArray.length);
+                micIndicator.className = "indicator " + (rms > 0.01 ? "on" : "off");
+                animationFrameId = requestAnimationFrame(updateMeter);
             }
+            updateMeter();
         }
 
-        // 3. Publish local microphone to the LiveKit room
-        async function startMicPublishing(roomInstance) {
-            try {
-                const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const track = new LiveKit.LocalAudioTrack(micStream.getAudioTracks()[0]);
-                await roomInstance.localParticipant.publishTrack(track);
-                console.log("Mic track published to LiveKit");
-                statusEl.textContent = `Status: Connected & Publishing Mic`;
-            } catch (err) {
-                console.error("Failed to publish mic track:", err);
-                statusEl.textContent = 'Status: Mic publishing failed';
-            }
-        }
-        
-        // 4. UI changes and event listeners
-        startBtn.addEventListener('click', async () => {
-            startBtn.disabled = true;
-            stopBtn.disabled = false;
+        async function joinAgoraAndStartVC() {
+            if (client && client.connectionState === 'CONNECTED') return;
+            isReconnecting = false;
             
             try {
-                room = await connectToLiveKit();
-                if (room) {
-                    await startMicPublishing(room);
-                } else {
-                     // Connection failed, reset UI
-                     startBtn.disabled = false;
-                     stopBtn.disabled = true;
-                }
-            } catch (e) {
-                 // Connection failed, reset UI
-                 startBtn.disabled = false;
-                 stopBtn.disabled = true;
+                statusText.textContent = "Fetching token...";
+                const uid = String(Math.floor(Math.random() * 1000000));
+                const data = await fetchAgoraToken(uid, CHANNEL);
+                const { app_id: APP_ID, token: TOKEN } = data;
+                
+                statusText.textContent = "Connecting...";
+                client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+                await client.join(APP_ID, CHANNEL, TOKEN, uid);
+
+                audioCtx = new AudioContext({ sampleRate: 16000 });
+                processor = audioCtx.createScriptProcessor(512, 1, 1);
+                processedStreamDestination = audioCtx.createMediaStreamDestination();
+                const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                micSource = audioCtx.createMediaStreamSource(mediaStream);
+                
+                micSource.connect(processor);
+                processor.connect(audioCtx.destination);
+                setupMicLevel(micSource, audioCtx); // Start mic indicator
+
+                localTrack = await AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: processedStreamDestination.stream.getAudioTracks()[0] });
+                await client.publish(localTrack);
+                
+                const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+                ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws/audio`);
+                ws.binaryType = "arraybuffer";
+
+                ws.onopen = () => {
+                    console.log("🔗 WebSocket connected");
+                    vcIndicator.className = "indicator on";
+                    statusText.textContent = "Connected";
+                };
+
+                ws.onmessage = (event) => {
+                    if (typeof event.data === "string") {
+                        try {
+                            const msg = JSON.parse(event.data);
+                            if (msg.meta) {
+                                algoDelayEl.textContent = msg.meta.algorithm_delay.toFixed(1);
+                                inferTimeEl.textContent = msg.meta.inference_time.toFixed(1);
+                            }
+                        } catch (e) {}
+                    } else if (event.data instanceof ArrayBuffer) {
+                        playPCM(new Float32Array(event.data));
+                    }
+                };
+                
+                ws.onclose = () => {
+                    console.warn("🔌 WebSocket disconnected. Reconnect logic could go here.");
+                    vcIndicator.className = "indicator off";
+                    statusText.textContent = "Connection Lost";
+                };
+                ws.onerror = (err) => console.error("WebSocket error:", err);
+
+                processor.onaudioprocess = (e) => {
+                    if (ws?.readyState === WebSocket.OPEN) {
+                        ws.send(e.inputBuffer.getChannelData(0).buffer);
+                    }
+                };
+
+                client.on("user-published", async (user, mediaType) => {
+                    await client.subscribe(user, mediaType);
+                    if (mediaType === "audio") user.audioTrack.play();
+                });
+
+            } catch (err) {
+                console.error("Failed to start VC:", err);
+                statusText.textContent = `Failed: ${err.message}`;
+                await leaveAgoraAndStopVC(true);
+            }
+        }
+
+        async function leaveAgoraAndStopVC() {
+            try {
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+                micIndicator.className = "indicator off";
+                vcIndicator.className = "indicator off";
+                algoDelayEl.textContent = "0";
+                inferTimeEl.textContent = "0";
+                statusText.textContent = "Disconnected";
+
+                if (ws) { ws.onclose = null; ws.close(); ws = null; }
+                if (processor) { processor.disconnect(); processor.onaudioprocess = null; processor = null; }
+                if (micSource) { micSource.disconnect(); micSource = null; }
+                if (audioCtx) { await audioCtx.close(); audioCtx = null; }
+                if (localTrack) { localTrack.stop(); localTrack.close(); localTrack = null; }
+                if (client) { await client.leave(); client = null; }
+            } catch (err) {
+                console.error("Failed to leave cleanly:", err);
+            }
+        }
+        
+        startBtn.addEventListener("click", async () => {
+            startBtn.disabled = true;
+            await joinAgoraAndStartVC();
+            if (client?.connectionState === 'CONNECTED') {
+               stopBtn.disabled = false;
+            } else {
+               startBtn.disabled = false;
             }
         });
 
-        stopBtn.addEventListener('click', async () => {
-            if (room) {
-                await room.disconnect();
-                room = null;
-                console.log("Disconnected from LiveKit room.");
-                statusEl.textContent = 'Status: Disconnected';
-            }
-            // remove all created audio elements
-            document.querySelectorAll('audio').forEach(el => el.remove());
-            startBtn.disabled = false;
+        stopBtn.addEventListener("click", async () => {
             stopBtn.disabled = true;
+            startBtn.disabled = false;
+            await leaveAgoraAndStopVC();
         });
-
     });
     </script>
 </body>
