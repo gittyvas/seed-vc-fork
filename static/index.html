@@ -3,324 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seed-VC - GUI (Agora)</title>
-    <!-- Replaced LiveKit SDK with Agora SDK -->
-    <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+    <title>Seed-VC - GUI</title>
     <style>
-        /* --- General Styles & Variables --- */
         :root {
-            --bg-color: #dbe2ef;
-            --window-chrome-bg: #a9b8ce;
-            --border-color: #7d8ca1;
-            --text-color: #000;
-            --slider-track-color: #bec6d4;
-            --slider-thumb-color: #e9eef6;
-            --slider-thumb-border: #8c97a8;
-            --button-bg-start: #f8f9fa;
-            --button-bg-end: #e3e4e6;
-            --button-border: #a0a0a0;
-            --select-bg: #3c3c3c;
-            --select-text: #ffffff;
+            --bg-color: #dbe2ef; --window-chrome-bg: #a9b8ce; --border-color: #7d8ca1;
+            --text-color: #000; --slider-track-color: #bec6d4; --slider-thumb-color: #e9eef6;
+            --slider-thumb-border: #8c97a8; --button-bg-start: #f8f9fa; --button-bg-end: #e3e4e6;
+            --button-border: #a0a0a0; --select-bg: #FFF; --select-text: #000;
             --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            --indicator-on: #4caf50;
-            --indicator-off: #f44336;
+            --indicator-on: #4caf50; --indicator-off: #f44336;
         }
-
         body {
-            background-color: var(--window-chrome-bg);
-            font-family: var(--font-family);
-            color: var(--text-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-            font-size: 13px; /* Matches typical desktop app font size */
+            background-color: var(--window-chrome-bg); font-family: var(--font-family);
+            color: var(--text-color); display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; font-size: 13px;
         }
-
-        /* --- Window Container --- */
         .window-container {
-            background-color: var(--bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
-            width: 900px;
-            max-width: 100%;
-            overflow: hidden;
+            background-color: var(--bg-color); border: 1px solid var(--border-color);
+            border-radius: 6px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
+            width: 900px; max-width: 100%; overflow: hidden;
         }
-
-        /* --- Custom Title Bar --- */
         .title-bar {
-            background-color: #e3e9f5;
-            padding: 6px 10px;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-            cursor: default;
+            background-color: #e3e9f5; padding: 6px 10px; font-weight: 600;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border-color); cursor: default;
         }
-
-        .window-controls {
-            display: flex;
-            gap: 8px;
-        }
-
-        .window-controls span {
-            width: 18px;
-            height: 18px;
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 16px;
-            line-height: 1;
-            border-radius: 3px;
-        }
-        .window-controls .close {
-            background-color: #e81123;
-            color: white;
-            border-color: #e81123;
-        }
-
-        /* --- Main Content Area --- */
-        .main-content {
-            padding: 15px;
-        }
-
+        .window-controls .close { background-color: #e81123; color: white; border-color: #e81123; }
+        .main-content { padding: 15px; }
         fieldset {
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 15px;
-            margin: 0 0 15px 0;
+            border: 1px solid var(--border-color); border-radius: 4px;
+            padding: 15px; margin: 0 0 15px 0;
         }
-
-        legend {
-            padding: 0 5px;
-            margin-left: 10px;
-            font-size: 1em;
-            font-weight: 600;
-        }
-
-        /* --- UI Elements Styling --- */
+        legend { padding: 0 5px; margin-left: 10px; font-size: 1em; font-weight: 600; }
         input[type="text"], select {
-            border: 1px solid var(--border-color);
-            padding: 5px 8px;
-            border-radius: 3px;
-            background-color: #fff;
-            font-family: var(--font-family);
-            font-size: 1em;
+            border: 1px solid var(--border-color); padding: 5px 8px; border-radius: 3px;
+            background-color: var(--select-bg); color: var(--select-text);
+            font-family: var(--font-family); font-size: 1em; width: 100%;
         }
-
-        button, .button {
+        button {
             background: linear-gradient(to bottom, var(--button-bg-start), var(--button-bg-end));
-            border: 1px solid var(--button-border);
-            border-radius: 3px;
-            padding: 5px 12px;
-            font-family: var(--font-family);
-            cursor: pointer;
-            font-size: 1em;
+            border: 1px solid var(--button-border); border-radius: 3px;
+            padding: 5px 12px; font-family: var(--font-family); cursor: pointer; font-size: 1em;
         }
-        button:hover, .button:hover {
-            border-color: #666;
-        }
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        /* --- Section-Specific Layouts --- */
-        .load-audio-section {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .load-audio-section p {
-            margin: 0;
-        }
-
-        .sound-device-section {
-            display: grid;
-            grid-template-columns: auto 1fr auto 1fr;
-            grid-template-rows: auto auto;
-            gap: 10px 15px;
-            align-items: center;
-        }
-        .sound-device-section label {
-            justify-self: end;
-        }
-        .sound-device-section select {
-            background-color: var(--select-bg);
-            color: var(--select-text);
-        }
-        .sound-device-section .bottom-row {
-            grid-column: 1 / -1;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-top: 10px;
-        }
-         .sound-device-section .sampling-rate-input {
-            width: 60px;
-        }
-
-        .settings-container {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .settings-container > fieldset {
-            flex: 1;
-            margin: 0;
-        }
-
-        /* --- Slider Control Styling --- */
-        .slider-control {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            grid-template-rows: auto auto;
-            gap: 2px 10px;
-            align-items: center;
-            margin-bottom: 14px;
-        }
-        .slider-control label {
-            grid-column: 1 / 2;
-        }
-        .slider-control input[type="range"] {
-            grid-column: 1 / 2;
-            grid-row: 2 / 3;
-            margin: 0;
-        }
-        .slider-control .slider-value {
-            grid-column: 2 / 3;
-            grid-row: 1 / 3;
-            background-color: #fff;
-            border: 1px solid var(--border-color);
-            padding: 4px 6px;
-            border-radius: 3px;
-            min-width: 35px;
-            text-align: center;
-        }
-
-        input[type="range"] {
-            -webkit-appearance: none;
-            width: 100%;
-            background: transparent;
-        }
-        input[type="range"]:focus {
-            outline: none;
-        }
-        input[type="range"]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 6px;
-            cursor: pointer;
-            background: var(--slider-track-color);
-            border-radius: 3px;
-            border: 1px solid var(--border-color);
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            border: 1px solid var(--slider-thumb-border);
-            height: 18px;
-            width: 18px;
-            border-radius: 3px;
-            background: var(--slider-thumb-color);
-            cursor: pointer;
-            -webkit-appearance: none;
-            margin-top: -7px;
-        }
-        input[type="range"]::-moz-range-track {
-            width: 100%;
-            height: 6px;
-            cursor: pointer;
-            background: var(--slider-track-color);
-            border-radius: 3px;
-            border: 1px solid var(--border-color);
-        }
-        input[type="range"]::-moz-range-thumb {
-            border: 1px solid var(--slider-thumb-border);
-            height: 18px;
-            width: 18px;
-            border-radius: 3px;
-            background: var(--slider-thumb-color);
-            cursor: pointer;
-        }
-
-        /* --- Bottom Controls & Status Indicators --- */
-        .bottom-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 5px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        .bottom-bar .action-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        .bottom-bar .action-buttons button {
-            padding: 8px 20px;
-            font-size: 1.1em;
-            font-weight: 600;
-        }
-        
-        /* New Status Styles */
-        .status-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px 20px;
-            align-items: center;
-        }
-        .status-box {
-            display: flex;
-            align-items: center;
-        }
-        .indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 6px;
-            border: 1px solid rgba(0,0,0,0.1);
-        }
+        button:hover { border-color: #666; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .load-audio-section { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; }
+        .load-audio-section p { margin: 0; white-space: nowrap; }
+        .sound-device-section { display: grid; grid-template-columns: auto 1fr; gap: 10px 15px; align-items: center; }
+        .sound-device-section label { justify-self: end; }
+        .sound-device-section .bottom-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 15px; margin-top: 10px; }
+        .sound-device-section .sampling-rate-input { width: 60px; }
+        .settings-container { display: flex; gap: 15px; margin-bottom: 15px; }
+        .settings-container > fieldset { flex: 1; margin: 0; }
+        .slider-control { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 2px 10px; align-items: center; margin-bottom: 14px; }
+        .slider-control label { grid-column: 1 / 2; }
+        .slider-control input[type="range"] { grid-column: 1 / 2; grid-row: 2 / 3; margin: 0; }
+        .slider-control .slider-value { grid-column: 2 / 3; grid-row: 1 / 3; background-color: #fff; border: 1px solid var(--border-color); padding: 4px 6px; border-radius: 3px; min-width: 35px; text-align: center; }
+        input[type="range"] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type="range"]:focus { outline: none; }
+        input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: var(--slider-track-color); border-radius: 3px; border: 1px solid var(--border-color); }
+        input[type="range"]::-webkit-slider-thumb { border: 1px solid var(--slider-thumb-border); height: 18px; width: 18px; border-radius: 3px; background: var(--slider-thumb-color); cursor: pointer; -webkit-appearance: none; margin-top: -7px; }
+        .bottom-bar { display: flex; justify-content: space-between; align-items: center; padding-top: 5px; flex-wrap: wrap; gap: 15px; }
+        .bottom-bar .action-buttons { display: flex; gap: 10px; }
+        .bottom-bar .action-buttons button { padding: 8px 20px; font-size: 1.1em; font-weight: 600; }
+        .status-container { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; }
+        .status-box { display: flex; align-items: center; }
+        .indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; border: 1px solid rgba(0,0,0,0.1); }
         .indicator.on { background: var(--indicator-on); }
         .indicator.off { background: var(--indicator-off); }
-
     </style>
 </head>
 <body>
-
     <div class="window-container">
         <div class="title-bar">
             <span>Seed-VC - GUI</span>
-            <div class="window-controls">
-                <span>&minus;</span>
-                <span>&#9723;</span>
-                <span class="close">&times;</span>
-            </div>
         </div>
 
         <div class="main-content">
             <fieldset>
                 <legend>Load reference audio</legend>
                 <div class="load-audio-section">
-                    <input type="file" id="referenceFile" accept="audio/*">
-                    <button id="uploadRefBtn">Upload Reference</button>
-                    <p id="refStatus"></p>
+                    <select id="reference-select">
+                        <option value="">-- Loading references... --</option>
+                    </select>
+                    <p id="refStatus">Select a voice.</p>
                 </div>
             </fieldset>
 
             <fieldset>
                 <legend>Sound Device</legend>
                 <div class="sound-device-section">
-                    <label for="device-type">Device type</label>
-                    <select id="device-type"><option>MME</option></select>
-
-                    <button>WASAPI Exclusive Device</button>
-                    <div></div> <label for="input-device">Input Device</label>
+                    <label for="input-device">Input Device</label>
                     <select id="input-device"></select>
 
                     <label for="output-device">Output Device</label>
@@ -328,16 +101,12 @@
 
                     <div class="bottom-row">
                         <button id="reload-devices-btn">Reload devices</button>
-                        <div class="radio-group">
-                            <input type="radio" id="model-sr" name="sampling-rate">
-                            <label for="model-sr">Use model sampling rate</label>
-                        </div>
-                        <div class="radio-group">
-                            <input type="radio" id="device-sr" name="sampling-rate" checked>
-                            <label for="device-sr">Use device sampling rate</label>
-                        </div>
+                        <input type="radio" id="model-sr" name="sampling-rate-source" value="model" checked>
+                        <label for="model-sr">Use model sampling rate</label>
+                        <input type="radio" id="device-sr" name="sampling-rate-source" value="device">
+                        <label for="device-sr">Use device sampling rate</label>
                         <span>Sampling rate:</span>
-                        <input type="text" value="22050" class="sampling-rate-input">
+                        <input type="text" id="sampling-rate" value="16000" class="sampling-rate-input" disabled>
                     </div>
                 </div>
             </fieldset>
@@ -346,22 +115,31 @@
                 <fieldset>
                     <legend>Regular settings</legend>
                     <div class="slider-control">
-                        <label for="diffusion">Diffusion steps</label>
-                        <input type="range" id="diffusion" min="1" max="50" value="10" data-output="diffusion-output" step="1">
-                        <span id="diffusion-output" class="slider-value">10</span>
+                        <label for="diffusion-steps">Diffusion steps</label>
+                        <input type="range" id="diffusion-steps" min="1" max="50" value="12" step="1" data-output="diffusion-steps-output">
+                        <span id="diffusion-steps-output" class="slider-value">12</span>
                     </div>
                     <div class="slider-control">
-                        <label for="inference">Inference cfg rate</label>
-                        <input type="range" id="inference" min="0" max="2" value="0.0" step="0.1" data-output="inference-output">
-                        <span id="inference-output" class="slider-value">0.0</span>
+                        <label for="inference-cfg-rate">Inference cfg rate</label>
+                        <input type="range" id="inference-cfg-rate" min="0" max="2" value="0.7" step="0.1" data-output="inference-cfg-rate-output">
+                        <span id="inference-cfg-rate-output" class="slider-value">0.7</span>
                     </div>
                     <div class="slider-control">
-                        <label for="max-prompt">Max prompt length (s)</label>
-                        <input type="range" id="max-prompt" min="0.5" max="10" value="3.0" step="0.1" data-output="max-prompt-output">
-                        <span id="max-prompt-output" class="slider-value">3.0</span>
+                        <label for="max-prompt-length">Max prompt length (s)</label>
+                        <input type="range" id="max-prompt-length" min="0.5" max="10" value="2.6" step="0.1" data-output="max-prompt-length-output">
+                        <span id="max-prompt-length-output" class="slider-value">2.6</span>
+                    </div>
+                     <div class="slider-control">
+                        <label for="mic-input-gain">Mic Input Gain</label>
+                        <input type="range" id="mic-input-gain" min="0.0" max="2.0" value="1.0" step="0.1" data-output="mic-input-gain-output">
+                        <span id="mic-input-gain-output" class="slider-value">1.0</span>
+                    </div>
+                     <div class="slider-control">
+                        <label for="audio-output-volume">Audio Output Volume</label>
+                        <input type="range" id="audio-output-volume" min="0.0" max="2.0" value="1.0" step="0.1" data-output="audio-output-volume-output">
+                        <span id="audio-output-volume-output" class="slider-value">1.0</span>
                     </div>
                 </fieldset>
-
                 <fieldset>
                     <legend>Performance settings</legend>
                     <div class="slider-control">
@@ -370,308 +148,403 @@
                         <span id="block-time-output" class="slider-value">0.70</span>
                     </div>
                     <div class="slider-control">
-                        <label for="crossfade">Crossfade length</label>
-                        <input type="range" id="crossfade" min="0" max="0.2" value="0.04" step="0.01" data-output="crossfade-output">
-                        <span id="crossfade-output" class="slider-value">0.04</span>
+                        <label for="crossfade-length">Crossfade length</label>
+                        <input type="range" id="crossfade-length" min="0" max="0.2" value="0.04" step="0.01" data-output="crossfade-length-output">
+                        <span id="crossfade-length-output" class="slider-value">0.04</span>
                     </div>
                     <div class="slider-control">
-                        <label for="content-encoder">Extra content encoder context time (left)</label>
-                        <input type="range" id="content-encoder" min="0" max="10" value="5.0" step="0.1" data-output="content-encoder-output">
-                        <span id="content-encoder-output" class="slider-value">5.0</span>
+                        <label for="content-encoder-context">Extra content encoder context time (left)</label>
+                        <input type="range" id="content-encoder-context" min="0" max="10" value="5.0" step="0.1" data-output="content-encoder-context-output">
+                        <span id="content-encoder-context-output" class="slider-value">5.0</span>
                     </div>
                      <div class="slider-control">
-                        <label for="dit-context">Extra DiT context time (left)</label>
-                        <input type="range" id="dit-context" min="0" max="2" value="0.5" step="0.1" data-output="dit-context-output">
-                        <span id="dit-context-output" class="slider-value">0.5</span>
+                        <label for="dit-context-time">Extra DiT context time (left)</label>
+                        <input type="range" id="dit-context-time" min="0" max="2" value="0.5" step="0.1" data-output="dit-context-time-output">
+                        <span id="dit-context-time-output" class="slider-value">0.5</span>
                     </div>
                      <div class="slider-control">
-                        <label for="extra-context">Extra context time (right)</label>
-                        <input type="range" id="extra-context" min="0" max="0.2" value="0.02" step="0.01" data-output="extra-context-output">
-                        <span id="extra-context-output" class="slider-value">0.02</span>
+                        <label for="extra-context-time">Extra context time (right)</label>
+                        <input type="range" id="extra-context-time" min="0" max="0.2" value="0.02" step="0.01" data-output="extra-context-time-output">
+                        <span id="extra-context-time-output" class="slider-value">0.02</span>
                     </div>
                 </fieldset>
             </div>
-
             <div class="bottom-bar">
                 <div class="action-buttons">
                     <button id="start-vc-btn">Start Voice Conversion</button>
                     <button id="stop-vc-btn" disabled>Stop Voice Conversion</button>
                 </div>
-                <!-- Merged Status UI -->
                 <div class="status-container">
-                    <div class="status-box">
-                      <span class="indicator off" id="mic-ind"></span> Input listening
-                    </div>
-                    <div class="status-box">
-                      <span class="indicator off" id="vc-ind"></span> Voice Conversion
-                    </div>
-                    <div class="status-box">
-                      <strong>Status:</strong> <span id="status-text">Disconnected</span>
-                    </div>
-                    <div class="status-box">
-                      <strong>Delay (ms):</strong> <span id="algo-delay">0</span>
-                    </div>
-                     <div class="status-box">
-                      <strong>Inference (ms):</strong> <span id="infer-time">0</span>
-                    </div>
+                    <div class="status-box"> <span class="indicator off" id="mic-ind"></span> Input listening </div>
+                    <div class="status-box"> <span class="indicator off" id="vc-ind"></span> Voice Conversion </div>
+                    <div class="status-box"> <strong>Status:</strong> <span id="status-text">Disconnected</span> </div>
+                    <div class="status-box"> <strong>Delay (ms):</strong> <span id="algo-delay">0</span> </div>
+                    <div class="status-box"> <strong>Inference (ms):</strong> <span id="infer-time">0</span> </div>
                 </div>
             </div>
-
         </div>
     </div>
 
-    <!-- UI Interaction Script (Unchanged) -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const sliders = document.querySelectorAll('input[type="range"]');
-            sliders.forEach(slider => {
-                const outputElement = document.getElementById(slider.dataset.output);
-                if (!outputElement) return;
-                const updateSliderValue = () => {
-                    const step = slider.getAttribute('step') || '1';
-                    const decimalPlaces = (step.includes('.')) ? step.split('.')[1].length : 0;
-                    outputElement.textContent = parseFloat(slider.value).toFixed(decimalPlaces);
-                };
-                updateSliderValue();
-                slider.addEventListener('input', updateSliderValue);
-            });
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM Element References ---
+    const DOMElements = {
+        startBtn: document.getElementById('start-vc-btn'),
+        stopBtn: document.getElementById('stop-vc-btn'),
+        refStatus: document.getElementById('refStatus'),
+        referenceSelect: document.getElementById('reference-select'),
+        micIndicator: document.getElementById('mic-ind'),
+        vcIndicator: document.getElementById('vc-ind'),
+        statusText: document.getElementById('status-text'),
+        algoDelayEl: document.getElementById('algo-delay'),
+        inferTimeEl: document.getElementById('infer-time'),
+        inputDeviceSelect: document.getElementById('input-device'),
+        outputDeviceSelect: document.getElementById('output-device'),
+        reloadDevicesBtn: document.getElementById('reload-devices-btn'),
+        samplingRateInput: document.getElementById('sampling-rate'),
+        samplingRateRadios: document.querySelectorAll('input[name="sampling-rate-source"]'),
+        allControls: document.querySelectorAll('input[type="range"], input[type="text"], select, input[type="radio"]')
+    };
 
-            const inputDeviceSelect = document.getElementById('input-device');
-            const outputDeviceSelect = document.getElementById('output-device');
-            const reloadButton = document.getElementById('reload-devices-btn');
+    // --- State Variables ---
+    let ws, audioCtx, micSource, workletNode, micGainNode, outputGainNode;
+    let analyser, dataArray, animationFrameId;
+    let modelDefaultSr = 16000;
 
-            async function populateAudioDevices() {
-                inputDeviceSelect.innerHTML = '';
-                outputDeviceSelect.innerHTML = '';
-                try {
-                    await navigator.mediaDevices.getUserMedia({ audio: true });
-                    const devices = await navigator.mediaDevices.enumerateDevices();
-                    const audioInputDevices = devices.filter(d => d.kind === 'audioinput');
-                    const audioOutputDevices = devices.filter(d => d.kind === 'audiooutput');
-                    audioInputDevices.forEach(d => {
-                        const opt = document.createElement('option');
-                        opt.value = d.deviceId;
-                        opt.text = d.label || `Microphone ${inputDeviceSelect.length + 1}`;
-                        inputDeviceSelect.appendChild(opt);
-                    });
-                    audioOutputDevices.forEach(d => {
-                        const opt = document.createElement('option');
-                        opt.value = d.deviceId;
-                        opt.text = d.label || `Speaker ${outputDeviceSelect.length + 1}`;
-                        outputDeviceSelect.appendChild(opt);
-                    });
-                } catch (err) {
-                    console.error("Error accessing media devices:", err);
-                }
-            }
-            populateAudioDevices();
-            reloadButton.addEventListener('click', populateAudioDevices);
-        });
-    </script>
+    // --- Core Functions ---
 
-    <!-- Main Application Logic Script -->
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const startBtn = document.getElementById('start-vc-btn');
-        const stopBtn = document.getElementById('stop-vc-btn');
-        const uploadRefBtn = document.getElementById('uploadRefBtn');
-        const micIndicator = document.getElementById('mic-ind');
-        const vcIndicator = document.getElementById('vc-ind');
-        const statusText = document.getElementById('status-text');
-        const algoDelayEl = document.getElementById('algo-delay');
-        const inferTimeEl = document.getElementById('infer-time');
+    /** Gathers all settings from the UI controls into a single object. */
+    function getSettings() {
+        return {
+            // FIX: deviceId is a string, not an integer. parseInt is removed.
+            input_device_id: DOMElements.inputDeviceSelect.value,
+            output_device_id: DOMElements.outputDeviceSelect.value,
+            sampling_rate: parseInt(DOMElements.samplingRateInput.value, 10),
+            diffusion_steps: parseInt(document.getElementById('diffusion-steps').value, 10),
+            inference_cfg_rate: parseFloat(document.getElementById('inference-cfg-rate').value),
+            max_prompt_length: parseFloat(document.getElementById('max-prompt-length').value),
+            mic_input_gain: parseFloat(document.getElementById('mic-input-gain').value),
+            audio_output_volume: parseFloat(document.getElementById('audio-output-volume').value),
+            block_time: parseFloat(document.getElementById('block-time').value),
+            crossfade_length: parseFloat(document.getElementById('crossfade-length').value),
+            content_encoder_context: parseFloat(document.getElementById('content-encoder-context').value),
+            dit_context_time: parseFloat(document.getElementById('dit-context-time').value),
+            extra_context_time: parseFloat(document.getElementById('extra-context-time').value),
+        };
+    }
 
-        const CHANNEL = "realtime-vc";
-
-        // State variables
-        let client, localTrack, ws, audioCtx, processor, micSource, processedStreamDestination;
-        let analyser, dataArray, animationFrameId;
-        let isReconnecting = false;
-
-        async function uploadReference() {
-            const fileInput = document.getElementById("referenceFile");
-            const refStatus = document.getElementById("refStatus");
-            const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
-
-            if (!fileInput.files.length) {
-                refStatus.textContent = "Please choose a file.";
-                return;
-            }
-            const file = fileInput.files[0];
-            if (file.size > MAX_FILE_SIZE) {
-                refStatus.textContent = `File too large (max 5 MB).`;
-                return;
-            }
-            const formData = new FormData();
-            formData.append("file", file);
-            refStatus.textContent = "Uploading...";
-            try {
-                const res = await fetch("/upload_reference", { method: "POST", body: formData });
-                refStatus.textContent = res.ok ? "✅ Reference uploaded!" : "❌ Failed to upload reference";
-            } catch (err) {
-                console.error("Upload error:", err);
-                refStatus.textContent = "❌ Upload error";
-            }
+    /** Sends the current settings over the WebSocket if it's open. */
+    function sendSettings() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "config", data: getSettings() }));
         }
-        uploadRefBtn.addEventListener('click', uploadReference);
+    }
 
-        async function fetchAgoraToken(uid, channel) {
-            try {
-                const res = await fetch(`/get_token?uid=${uid}&channel=${channel}`);
-                if (!res.ok) throw new Error(`Server error: ${res.status}`);
-                return res.json();
-            } catch (error) {
-                console.error("Failed to get Agora token:", error);
-                throw error;
-            }
-        }
-        
-        function playPCM(float32Array) {
-            if (!audioCtx) return;
-            const buffer = audioCtx.createBuffer(1, float32Array.length, audioCtx.sampleRate);
-            buffer.copyToChannel(float32Array, 0);
-            const source = audioCtx.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioCtx.destination);
-            if (processedStreamDestination) source.connect(processedStreamDestination);
-            source.start();
-        }
+    /** Handles starting the voice conversion process. */
+    async function startVoiceConversion() {
+        if (audioCtx) return;
+        DOMElements.startBtn.disabled = true;
+        DOMElements.statusText.textContent = "Requesting mic permission...";
 
-        // Sets up the real-time mic level indicator
-        function setupMicLevel(audioSourceNode, context) {
-            analyser = context.createAnalyser();
-            analyser.fftSize = 256;
-            dataArray = new Uint8Array(analyser.frequencyBinCount);
-            audioSourceNode.connect(analyser);
+        try {
+            const settings = getSettings();
+            let constraints;
 
-            function updateMeter() {
-                analyser.getByteTimeDomainData(dataArray);
-                let sum = 0;
-                for (let i = 0; i < dataArray.length; i++) {
-                    const v = (dataArray[i] - 128) / 128;
-                    sum += v * v;
-                }
-                const rms = Math.sqrt(sum / dataArray.length);
-                micIndicator.className = "indicator " + (rms > 0.01 ? "on" : "off");
-                animationFrameId = requestAnimationFrame(updateMeter);
-            }
-            updateMeter();
-        }
-
-        async function joinAgoraAndStartVC() {
-            if (client && client.connectionState === 'CONNECTED') return;
-            isReconnecting = false;
-            
-            try {
-                statusText.textContent = "Fetching token...";
-                const uid = String(Math.floor(Math.random() * 1000000));
-                const data = await fetchAgoraToken(uid, CHANNEL);
-                const { app_id: APP_ID, token: TOKEN } = data;
-                
-                statusText.textContent = "Connecting...";
-                client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-                await client.join(APP_ID, CHANNEL, TOKEN, uid);
-
-                audioCtx = new AudioContext({ sampleRate: 16000 });
-                processor = audioCtx.createScriptProcessor(512, 1, 1);
-                processedStreamDestination = audioCtx.createMediaStreamDestination();
-                const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                micSource = audioCtx.createMediaStreamSource(mediaStream);
-                
-                micSource.connect(processor);
-                processor.connect(audioCtx.destination);
-                setupMicLevel(micSource, audioCtx); // Start mic indicator
-
-                localTrack = await AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: processedStreamDestination.stream.getAudioTracks()[0] });
-                await client.publish(localTrack);
-                
-                const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-                ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws/audio`);
-                ws.binaryType = "arraybuffer";
-
-                ws.onopen = () => {
-                    console.log("🔗 WebSocket connected");
-                    vcIndicator.className = "indicator on";
-                    statusText.textContent = "Connected";
-                };
-
-                ws.onmessage = (event) => {
-                    if (typeof event.data === "string") {
-                        try {
-                            const msg = JSON.parse(event.data);
-                            if (msg.meta) {
-                                algoDelayEl.textContent = msg.meta.algorithm_delay.toFixed(1);
-                                inferTimeEl.textContent = msg.meta.inference_time.toFixed(1);
-                            }
-                        } catch (e) {}
-                    } else if (event.data instanceof ArrayBuffer) {
-                        playPCM(new Float32Array(event.data));
-                    }
-                };
-                
-                ws.onclose = () => {
-                    console.warn("🔌 WebSocket disconnected. Reconnect logic could go here.");
-                    vcIndicator.className = "indicator off";
-                    statusText.textContent = "Connection Lost";
-                };
-                ws.onerror = (err) => console.error("WebSocket error:", err);
-
-                processor.onaudioprocess = (e) => {
-                    if (ws?.readyState === WebSocket.OPEN) {
-                        ws.send(e.inputBuffer.getChannelData(0).buffer);
-                    }
-                };
-
-                client.on("user-published", async (user, mediaType) => {
-                    await client.subscribe(user, mediaType);
-                    if (mediaType === "audio") user.audioTrack.play();
-                });
-
-            } catch (err) {
-                console.error("Failed to start VC:", err);
-                statusText.textContent = `Failed: ${err.message}`;
-                await leaveAgoraAndStopVC(true);
-            }
-        }
-
-        async function leaveAgoraAndStopVC() {
-            try {
-                if (animationFrameId) cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
-                micIndicator.className = "indicator off";
-                vcIndicator.className = "indicator off";
-                algoDelayEl.textContent = "0";
-                inferTimeEl.textContent = "0";
-                statusText.textContent = "Disconnected";
-
-                if (ws) { ws.onclose = null; ws.close(); ws = null; }
-                if (processor) { processor.disconnect(); processor.onaudioprocess = null; processor = null; }
-                if (micSource) { micSource.disconnect(); micSource = null; }
-                if (audioCtx) { await audioCtx.close(); audioCtx = null; }
-                if (localTrack) { localTrack.stop(); localTrack.close(); localTrack = null; }
-                if (client) { await client.leave(); client = null; }
-            } catch (err) {
-                console.error("Failed to leave cleanly:", err);
-            }
-        }
-        
-        startBtn.addEventListener("click", async () => {
-            startBtn.disabled = true;
-            await joinAgoraAndStartVC();
-            if (client?.connectionState === 'CONNECTED') {
-               stopBtn.disabled = false;
+            // FIX: Use the string deviceId from the settings
+            if (settings.input_device_id) {
+                constraints = { audio: { deviceId: { exact: settings.input_device_id } } };
             } else {
-               startBtn.disabled = false;
+                constraints = { audio: true };
             }
-        });
 
-        stopBtn.addEventListener("click", async () => {
-            stopBtn.disabled = true;
-            startBtn.disabled = false;
-            await leaveAgoraAndStopVC();
+            const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+            
+            // FIX: After permission is granted, repopulate devices to get full labels
+            await populateAudioDevices(false);
+
+            DOMElements.statusText.textContent = "Initializing audio...";
+            audioCtx = new AudioContext({ sampleRate: settings.sampling_rate });
+
+            micGainNode = audioCtx.createGain();
+            outputGainNode = audioCtx.createGain();
+            micGainNode.gain.value = settings.mic_input_gain;
+            outputGainNode.gain.value = settings.audio_output_volume;
+            
+            // FIX: Set the destination device for the audio context if selected
+            if (settings.output_device_id && typeof audioCtx.setSinkId === 'function') {
+                try {
+                    await audioCtx.setSinkId(settings.output_device_id);
+                } catch (err) {
+                    console.error("Failed to set output device:", err);
+                }
+            }
+            outputGainNode.connect(audioCtx.destination);
+
+            micSource = audioCtx.createMediaStreamSource(mediaStream);
+            await audioCtx.audioWorklet.addModule('/static/audio-processor.js');
+            workletNode = new AudioWorkletNode(audioCtx, 'audio-processor');
+            micSource.connect(micGainNode).connect(workletNode);
+
+            setupMicLevelVisualizer(micGainNode, audioCtx);
+
+            const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws/audio`);
+            ws.binaryType = "arraybuffer";
+
+            ws.onopen = () => {
+                console.log("🔗 WebSocket connected");
+                sendSettings();
+                DOMElements.vcIndicator.className = "indicator on";
+                DOMElements.statusText.textContent = "Connected";
+                DOMElements.stopBtn.disabled = false;
+            };
+
+            workletNode.port.onmessage = (event) => {
+                if (ws?.readyState === WebSocket.OPEN) {
+                    ws.send(event.data);
+                }
+            };
+
+            ws.onmessage = (event) => {
+                if (typeof event.data === "string") {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === "metadata") {
+                        DOMElements.inferTimeEl.textContent = msg.inference_time.toFixed(1);
+                        DOMElements.algoDelayEl.textContent = msg.algorithm_delay.toFixed(1);
+                    }
+                } else if (event.data instanceof ArrayBuffer) {
+                    playProcessedAudio(new Float32Array(event.data));
+                }
+            };
+
+            ws.onclose = () => handleStopCleanup("Connection Lost");
+            ws.onerror = (err) => {
+                console.error("WebSocket error:", err);
+                handleStopCleanup("WebSocket Error");
+            };
+
+        } catch (err) {
+            console.error("Failed to start VC:", err);
+            await stopVoiceConversion(true);
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                DOMElements.statusText.textContent = `Error: Mic permission denied.`;
+            } else {
+                DOMElements.statusText.textContent = `Error: ${err.message}`;
+            }
+        }
+    }
+
+    function playProcessedAudio(float32Array) {
+        if (!audioCtx || audioCtx.state === 'closed') return;
+        const buffer = audioCtx.createBuffer(1, float32Array.length, audioCtx.sampleRate);
+        buffer.copyToChannel(float32Array, 0);
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(outputGainNode);
+        source.start();
+    }
+    async function stopVoiceConversion(isError = false) {
+        if (!isError) DOMElements.stopBtn.disabled = true;
+        handleStopCleanup();
+    }
+    function handleStopCleanup(statusMessage = "Disconnected") {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+        if (ws) { ws.onclose = null; ws.close(); ws = null; }
+        if (workletNode) { workletNode.disconnect(); workletNode = null; }
+        if (micSource) {
+            micSource.mediaStream.getTracks().forEach(track => track.stop());
+            micSource.disconnect(); micSource = null;
+        }
+        if (audioCtx) { audioCtx.close().then(() => audioCtx = null); }
+        DOMElements.micIndicator.className = "indicator off";
+        DOMElements.vcIndicator.className = "indicator off";
+        DOMElements.algoDelayEl.textContent = "0";
+        DOMElements.inferTimeEl.textContent = "0";
+        DOMElements.statusText.textContent = statusMessage;
+        DOMElements.startBtn.disabled = false;
+        DOMElements.stopBtn.disabled = true;
+    }
+    function setupMicLevelVisualizer(sourceNode, context) {
+        if (!context.createAnalyser) return;
+        analyser = context.createAnalyser();
+        analyser.fftSize = 256;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        sourceNode.connect(analyser);
+        function updateMeter() {
+            if (!analyser) return;
+            analyser.getByteTimeDomainData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                const v = (dataArray[i] - 128) / 128;
+                sum += v * v;
+            }
+            const rms = Math.sqrt(sum / dataArray.length);
+            DOMElements.micIndicator.className = "indicator " + (rms > 0.01 ? "on" : "off");
+            animationFrameId = requestAnimationFrame(updateMeter);
+        }
+        updateMeter();
+    }
+    function initializeSliders() {
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            const outputElement = document.getElementById(slider.dataset.output);
+            if (!outputElement) return;
+            const updateSliderValue = () => {
+                const step = slider.getAttribute('step') || '1';
+                const decimalPlaces = (step.includes('.')) ? step.split('.')[1].length : 0;
+                outputElement.textContent = parseFloat(slider.value).toFixed(decimalPlaces);
+            };
+            updateSliderValue();
+            slider.addEventListener('input', updateSliderValue);
+        });
+    }
+
+    /** Fetches the list of reference .wav files and populates the dropdown. */
+    async function populateReferenceAudios() {
+        try {
+            const response = await fetch('/api/references');
+            if (!response.ok) throw new Error(`Server error: ${response.status}`);
+            const files = await response.json();
+            
+            DOMElements.referenceSelect.innerHTML = ''; // Clear loading message
+            const defaultOption = new Option('-- Select a Reference Voice --', '');
+            DOMElements.referenceSelect.add(defaultOption);
+
+            files.forEach(file => {
+                DOMElements.referenceSelect.add(new Option(file, file));
+            });
+        } catch (error) {
+            console.error('Failed to fetch reference files:', error);
+            DOMElements.referenceSelect.innerHTML = `<option value="">Error loading files</option>`;
+            DOMElements.refStatus.textContent = "Error loading files.";
+        }
+    }
+
+    /** Loads a selected reference audio by fetching it and sending to /upload_reference. */
+    async function loadReferenceAudio(filename) {
+        if (!filename) {
+            DOMElements.refStatus.textContent = 'Select a voice.';
+            return;
+        }
+        DOMElements.refStatus.textContent = `Loading ${filename}...`;
+        try {
+            // 1. Fetch the audio file from the server's static directory
+            const audioResponse = await fetch(`/references/${filename}`);
+            if (!audioResponse.ok) throw new Error(`File not found: ${audioResponse.status}`);
+            const audioBlob = await audioResponse.blob();
+
+            // 2. Create FormData and append the blob as a file
+            const formData = new FormData();
+            formData.append('file', audioBlob, filename);
+
+            // 3. Upload it to the caching endpoint
+            const uploadResponse = await fetch('/upload_reference', {
+                method: 'POST',
+                body: formData
+            });
+            if (!uploadResponse.ok) throw new Error(`Upload failed: ${uploadResponse.status}`);
+            const result = await uploadResponse.json();
+            
+            DOMElements.refStatus.textContent = result.message || '✅ Loaded!';
+
+        } catch (error) {
+            console.error('Failed to load reference audio:', error);
+            DOMElements.refStatus.textContent = '❌ Load failed.';
+        }
+    }
+    
+    // FIX: This function now uses the browser's MediaDevices API instead of fetching from a server.
+    async function populateAudioDevices(requestPermission = false) {
+        try {
+            // Request permission if needed, this allows the browser to return full device labels
+            if (requestPermission) {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Stop the tracks immediately, we only needed to trigger the permission prompt
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            DOMElements.inputDeviceSelect.innerHTML = '';
+            DOMElements.outputDeviceSelect.innerHTML = '';
+
+            devices.forEach(device => {
+                if (device.kind === 'audioinput') {
+                    // Only add devices that have a label (permission has been granted)
+                    if(device.label) {
+                       DOMElements.inputDeviceSelect.add(new Option(device.label, device.deviceId));
+                    }
+                } else if (device.kind === 'audiooutput') {
+                   if(device.label) {
+                       DOMElements.outputDeviceSelect.add(new Option(device.label, device.deviceId));
+                   }
+                }
+            });
+            // Add a default message if no devices are found after checking
+            if(DOMElements.inputDeviceSelect.length === 0) {
+                 DOMElements.inputDeviceSelect.add(new Option('No microphones found', ''));
+            }
+             if(DOMElements.outputDeviceSelect.length === 0) {
+                 DOMElements.outputDeviceSelect.add(new Option('No speakers found', ''));
+            }
+
+
+        } catch (err) {
+            console.error("Error populating audio devices:", err);
+            DOMElements.statusText.textContent = "Error: Can't get devices. Please grant permission.";
+        }
+    }
+    
+    async function fetchModelInfo() {
+        try {
+            const response = await fetch('/api/model_info');
+            if (!response.ok) throw new Error('Failed to fetch model info');
+            const info = await response.json();
+            modelDefaultSr = info.sampling_rate;
+            DOMElements.samplingRateInput.value = modelDefaultSr;
+        } catch (err) {
+            console.error("Could not fetch model info:", err);
+        }
+    }
+
+    // --- Event Listeners ---
+    DOMElements.startBtn.addEventListener("click", startVoiceConversion);
+    DOMElements.stopBtn.addEventListener("click", () => stopVoiceConversion(false));
+    // FIX: The reload button now explicitly requests permission to get the full device list
+    DOMElements.reloadDevicesBtn.addEventListener("click", () => populateAudioDevices(true));
+    DOMElements.referenceSelect.addEventListener('change', (e) => loadReferenceAudio(e.target.value));
+    DOMElements.allControls.forEach(control => control.addEventListener('input', sendSettings));
+    document.getElementById('mic-input-gain').addEventListener('input', (e) => {
+        if (micGainNode) micGainNode.gain.value = parseFloat(e.target.value);
+    });
+    document.getElementById('audio-output-volume').addEventListener('input', (e) => {
+        if (outputGainNode) outputGainNode.gain.value = parseFloat(e.target.value);
+    });
+    DOMElements.samplingRateRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if(e.target.value === 'model') {
+                DOMElements.samplingRateInput.value = modelDefaultSr;
+                DOMElements.samplingRateInput.disabled = true;
+            } else {
+                DOMElements.samplingRateInput.disabled = false;
+            }
+            sendSettings();
         });
     });
-    </script>
+
+    // --- Initial Setup ---
+    async function initialize() {
+        initializeSliders();
+        await fetchModelInfo();
+        // FIX: Call the new client-side device population function
+        await populateAudioDevices(); 
+        // This function for reference audios is back to your original code
+        await populateReferenceAudios(); 
+        DOMElements.statusText.textContent = "Ready";
+    }
+
+    initialize();
+});
+</script>
 </body>
 </html>
 
